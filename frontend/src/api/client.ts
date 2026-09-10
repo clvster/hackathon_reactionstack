@@ -1,11 +1,8 @@
 import axios from 'axios';
 
 export const client = axios.create({
-
-  baseURL: 'https://dev.reactionstack.135.106.217.211.sslip.io/api',
-  
+  baseURL: 'http://localhost:8000/api/v1',
 });
-
 client.interceptors.request.use((config) => {
 
   const token = localStorage.getItem('token');
