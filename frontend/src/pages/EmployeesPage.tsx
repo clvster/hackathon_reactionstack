@@ -2,15 +2,21 @@ import { useState } from 'react';
 import { Table, Select, Space } from 'antd';
 import { useUsers, type User } from '../api/users';
 import { useDepartments } from '../api/departments';
+import { usePermissions } from '../api/permissions';
 
 export default function EmployeesPage() {
   const { data: users, isLoading } = useUsers();
   const { data: departments } = useDepartments();
+  const { data: permissions } = usePermissions();
 
   const [directionFilter, setDirectionFilter] = useState<string | null>(null);
   const [departmentFilter, setDepartmentFilter] = useState<number | null>(null);
 
-  const filteredUsers = (users ?? []).filter((u) => {
+  const visibleUsers = (users ?? []).filter(
+    (u) => permissions?.is_admin || permissions?.visible_user_ids.includes(u.id)
+  );
+
+  const filteredUsers = visibleUsers.filter((u) => {
     if (directionFilter && u.direction !== directionFilter) return false;
     if (departmentFilter && u.department_id !== departmentFilter) return false;
     return true;
@@ -20,7 +26,12 @@ export default function EmployeesPage() {
     { title: 'ФИО', dataIndex: 'full_name', key: 'full_name' },
     { title: 'Направление', dataIndex: 'direction', key: 'direction' },
     { title: 'Подразделение', dataIndex: 'department_name', key: 'department_name' },
-    { title: 'Руководитель', dataIndex: 'leader_name', key: 'leader_name', render: (v: string | null) => v ?? '—' },
+    {
+      title: 'Руководитель',
+      dataIndex: 'leader_name',
+      key: 'leader_name',
+      render: (v: string | null) => v ?? '—',
+    },
   ];
 
   return (
