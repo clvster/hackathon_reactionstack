@@ -23,8 +23,8 @@ export default function LoginPage() {
         <Form.Item name="username" required={false} label="Логин" rules={[
           { required: true, message: 'Пожалуйста, введите логин' },
           { min: 2, message: 'Минимум 2 символа' },
-          { max: 8, message: 'Максимум 8 символов' },
-          { pattern: /^[a-zA-Z0-9]+$/, message: 'Только латинские буквы' },
+          { max: 16, message: 'Максимум 16 символов' },
+          { pattern: /^[a-zA-Z0-9@.]+$/, message: 'Только латинские буквы' },
           ]}>
           <Input />
         </Form.Item>
