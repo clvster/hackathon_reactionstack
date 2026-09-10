@@ -2,8 +2,8 @@ import axios from 'axios';
 
 export const client = axios.create({
 
-  baseURL: 'https://dev.reactionstack.135.106.217.211.sslip.io/api',
-  
+  baseURL: 'http://127.0.0.1:8000',
+
 });
 
 client.interceptors.request.use((config) => {
