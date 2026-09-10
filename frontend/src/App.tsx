@@ -5,7 +5,9 @@ import ruRU from 'antd/locale/ru_RU';
 import LoginPage from './pages/LoginPage';
 import OrgTreePage from './pages/OrgTreePage';
 import EmployeesPage from './pages/EmployeesPage';
-import  {SkillsPage}  from './features/skills/SkillsPage';
+import  {SkillsPage}  from './features/skills/SkillsPage'; # опасно
+import MeetingsPage from './pages/MeetingsPage';
+import AnalyticsPage from './pages/AnalyticsPage';
 
 const queryClient = new QueryClient();
 
@@ -19,7 +21,10 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/tree" element={<OrgTreePage />} />
             <Route path="/employees" element={<EmployeesPage />} />
-            <Route path="/skills" element={<SkillsPage />} />
+            <Route path="/skills" element={<SkillsPage />} /> # проверить
+            <Route path="/meetings" element={<MeetingsPage />} />
+            
+            <Route path="/analytics" element={<AnalyticsPage />} />
           </Routes>
         </BrowserRouter>
       </ConfigProvider>
