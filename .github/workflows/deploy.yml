@@ -17,7 +17,7 @@ jobs:
         uses: appleboy/ssh-action@v1
         env:
           BRANCH: ${{ github.ref_name }}
-          SERVICES: db frontend
+          SERVICES: db backend frontend
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
