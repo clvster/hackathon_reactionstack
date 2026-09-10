@@ -1,2 +1,27 @@
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# Environment & Secrets
 .env
 infra/.env
+!.env.example
+
+# IDEs
+.idea/
+.vscode/
+
+# Database & Docker
+postgres_data/
+*.sqlite3
+*.db
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
