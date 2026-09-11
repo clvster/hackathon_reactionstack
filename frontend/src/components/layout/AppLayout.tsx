@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import {
   ApartmentOutlined,
   TeamOutlined,
+  BookOutlined, 
   CalendarOutlined,
   BarChartOutlined,
   LogoutOutlined,
@@ -13,6 +14,7 @@ const { Header, Sider, Content } = Layout;
 const MENU_ITEMS = [
   { key: '/tree', icon: <ApartmentOutlined />, label: 'Структура' },
   { key: '/employees', icon: <TeamOutlined />, label: 'Сотрудники' },
+  { key: '/skills', icon: <BookOutlined />, label: 'Навыки' }, 
   { key: '/meetings', icon: <CalendarOutlined />, label: 'Встречи' },
   { key: '/analytics', icon: <BarChartOutlined />, label: 'Аналитика' },
 ];

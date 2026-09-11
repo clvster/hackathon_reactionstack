@@ -22,21 +22,15 @@ function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<LoginPage />} />
-<<<<<<< HEAD
-            <Route path="/tree" element={<OrgTreePage />} />
-            <Route path="/employees" element={<EmployeesPage />} />
-            <Route path="/skills" element={<SkillsPage />} />
-            <Route path="/meetings" element={<MeetingsPage />} />
-            <Route path="/analytics" element={<AnalyticsPage />} />
-=======
 
             <Route element={<AppLayout />}>
               <Route path="/tree" element={<OrgTreePage />} />
               <Route path="/employees" element={<EmployeesPage />} />
               <Route path="/meetings" element={<MeetingsPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/skills" element={<SkillsPage />} />
             </Route>
->>>>>>> ec55d0c94a21059407c2922b73e4ad97c6688d9d
+
           </Routes>
         </BrowserRouter>
       </ConfigProvider>
