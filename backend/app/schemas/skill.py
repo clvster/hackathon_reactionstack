@@ -40,3 +40,9 @@ class PlanItemRead(BaseModel):
     problem_comment: Optional[str] = Field(None, description="Комментарий к проблеме (если статус PROBLEM)")
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PlanItemUpdate(BaseModel):
+    target_date: Optional[date] = Field(None, description="Новая плановая дата")
+    status: Optional[SkillStatusEnum] = Field(None, description="Новый статус")
+    problem_comment: Optional[str] = Field(None, max_length=1000, description="Комментарий к проблеме")
