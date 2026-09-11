@@ -61,16 +61,16 @@ export default function MeetingsPage() {
       </Button>
       <Table rowKey="id" columns={columns} dataSource={meetings} loading={isLoading} />
 
-      <Modal title="Новая встреча" open={modalOpen} onCancel={() => setModalOpen(false)} onOk={() => form.submit()} width={600}>
+      <Modal title="Записать протокол встречи" open={modalOpen} onCancel={() => setModalOpen(false)} onOk={() => form.submit()} width={600}>
         <Form form={form} layout="vertical" onFinish={onFinish}>
           <Form.Item name="participant_id" label="Сотрудник" rules={[{ required: true }]}>
             <Select options={(users ?? []).map((u) => ({ value: u.id, label: u.full_name }))} />
           </Form.Item>
-          <Form.Item name="meeting_date" label="Дата" rules={[{ required: true }]}>
+          <Form.Item name="meeting_date" label="Дата проведения встречи" rules={[{ required: true }]}>
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item name="summary_markdown" label="Итоги (markdown)" rules={[{ required: true, min: 10 }]}>
-            <Input.TextArea rows={5} />
+          <Form.Item name="summary_markdown" label="Итоги встречи (что обсудили, markdown)" rules={[{ required: true, min: 10 }]}>
+            <Input.TextArea rows={5} placeholder="Например: обсудили прогресс по FastAPI, договорились..." />
           </Form.Item>
           <Form.Item name="files_and_links" label="Файлы/ссылки (по одной на строку)">
             <Input.TextArea rows={2} />
