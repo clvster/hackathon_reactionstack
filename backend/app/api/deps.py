@@ -54,14 +54,61 @@ async def get_current_user(
     return user
 
 
+async def ensure_tree_access(
+    db: AsyncSession,
+    current_user: User,
+    target_user_id: int,
+) -> None:
+    """
+    Проверка доступа для использования ВНУТРИ роутов других сущностей
+    (meetings, skills, analytics и т.д.), где путь не выглядит как
+    /resource/{user_id}, так что Path-зависимость verify_tree_access
+    напрямую не подходит — сначала нужно достать объект и понять, к
+    какому пользователю он относится.
+
+    Пример использования в meetings.py:
+
+        meeting = await db.get(Meeting, meeting_id)
+        if meeting is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Встреча не найдена")
+
+        await ensure_tree_access(db, current_user, meeting.participant_id)
+        # если исключение не выброшено - доступ есть, можно продолжать
+
+    Правила те же, что в verify_tree_access:
+    - администратор -> всегда доступ;
+    - пользователь -> доступ к самому себе;
+    - руководитель -> доступ к своей ветке дерева.
+    """
+
+    if current_user.is_admin:
+        return
+
+    if current_user.id == target_user_id:
+        return
+
+    has_access = await user_has_tree_access(
+        db=db,
+        current_user_id=current_user.id,
+        target_user_id=target_user_id,
+    )
+
+    if not has_access:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Нет доступа к этому пользователю",
+        )
+
+
 async def verify_tree_access(
-    target_user_id: int = Path(...),
+    user_id: int = Path(...),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> User:
     """
     Проверяет, имеет ли текущий пользователь доступ
-    к профилю target_user_id.
+    к профилю user_id (параметр пути ДОЛЖЕН называться так же,
+    как в роуте, иначе FastAPI не сможет его подставить).
 
     Правила:
     - администратор имеет доступ ко всем;
@@ -76,7 +123,7 @@ async def verify_tree_access(
     has_access = await user_has_tree_access(
         db=db,
         current_user_id=current_user.id,
-        target_user_id=target_user_id,
+        target_user_id=user_id,
     )
 
     if not has_access:
@@ -85,4 +132,22 @@ async def verify_tree_access(
             detail="Нет доступа к этому пользователю",
         )
 
+    return current_user
+
+
+async def ensure_can_manage_pr(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    target_user_id: int = None
+) -> User:
+    if current_user.id == target_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Сотрудник не может проводить Performance Review самому себе",
+        )
+    if not current_user.is_admin and not getattr(current_user, "is_lead", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Недостаточно прав для управления протоколами встреч",
+        )
     return current_user

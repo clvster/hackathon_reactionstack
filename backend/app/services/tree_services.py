@@ -173,6 +173,66 @@ async def is_department_descendant(
     return possible_parent_id in subtree_ids
 
 
+async def get_visible_user_ids(
+    db: AsyncSession,
+    current_user_id: int,
+    is_admin: bool,
+) -> list[int]:
+    """
+    Возвращает список ID пользователей, видимых текущему пользователю.
+
+    - Администратор -> все пользователи.
+    - Руководитель -> он сам + все сотрудники в подразделениях,
+      которыми он руководит (на любую глубину вложенности).
+    - Сотрудник без подчинённых -> только он сам.
+    """
+
+    if is_admin:
+        result = await db.execute(select(User.id))
+        return list(result.scalars().all())
+
+    department_ids = await get_leader_subtree_ids(
+        db=db,
+        leader_id=current_user_id,
+    )
+
+    if not department_ids:
+        return [current_user_id]
+
+    result = await db.execute(
+        select(User.id).where(User.department_id.in_(department_ids))
+    )
+
+    visible_ids = set(result.scalars().all())
+    visible_ids.add(current_user_id)
+
+    return list(visible_ids)
+
+
+async def get_visible_department_ids(
+    db: AsyncSession,
+    current_user_id: int,
+    is_admin: bool,
+) -> list[int]:
+    """
+    Возвращает список ID подразделений, видимых текущему пользователю.
+
+    - Администратор -> все подразделения.
+    - Руководитель -> подразделения, которыми он руководит, и их поддеревья.
+    - Сотрудник без подчинённых -> пустой список (дерева для просмотра
+      нет, но собственный профиль доступен через /users/me).
+    """
+
+    if is_admin:
+        result = await db.execute(select(Department.id))
+        return list(result.scalars().all())
+
+    return await get_leader_subtree_ids(
+        db=db,
+        leader_id=current_user_id,
+    )
+
+
 async def user_has_tree_access(
     db: AsyncSession,
     current_user_id: int,

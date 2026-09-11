@@ -1,28 +1,38 @@
-from typing import List
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
-# --- Блок аналитики по конкретному сотруднику ---
+from app.api.deps import get_current_user, get_db
+from app.models.user import User
+from app.schemas.analytics import DepartmentAnalyticsRead, UserAnalyticsRead
+from app.services.access import require_view_department, require_view_user
+from app.services.analytics_services import AnalyticsService
 
-class MonthlyHistoryItem(BaseModel):
-    # Структура точки для графика: сколько навыков подтверждено в конкретном месяце
-    month: str = Field(..., description="Год и месяц в формате YYYY-MM", examples=["2026-09"])
-    count: int = Field(..., description="Количество успешно подтвержденных навыков в этом месяце", examples=[3])
-
-class UserAnalyticsRead(BaseModel):
-    #  Схема ответа с метриками и динамикой сотрудника
-    user_id: int = Field(..., description="ID сотрудника")
-    overdue_skills_count: int = Field(..., description="Количество скиллов в плане, по которым просрочена плановая дата подтверждения", examples=[2])
-    monthly_dynamics: List[MonthlyHistoryItem] = Field(
-        default=[],
-        description="История подтверждения навыков по месяцам (массив для построения графика)"
-    )
+router = APIRouter(tags=["Аналитика развития"])
 
 
-# --- Блок аналитики по подразделению (команде руководителя) ---
+@router.get(
+    "/analytics/user/{user_id}",
+    response_model=UserAnalyticsRead,
+    summary="Аналитика сотрудника: динамика, отставание от плана",
+)
+async def get_user_analytics(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    await require_view_user(db, current_user, user_id)
+    return await AnalyticsService.get_user_metrics(db, user_id)
 
-class DepartmentAnalyticsRead(BaseModel):
-    """Схема ответа с метриками эффективности команды для руководителя подразделения"""
-    department_id: int = Field(..., description="ID анализируемого подразделения")
-    completion_rate: float = Field(..., description="Процент выполнения планов развития командой (от 0.0 до 100.0)", examples=[72.5])
-    open_problems_count: int = Field(..., description="Количество текущих открытых проблем у сотрудников в этом отделе", examples=[5])
-    total_planned_skills: int = Field(..., description="Общее количество запланированных скиллов у всех сотрудников подразделения суммарно", examples=[48])
+
+@router.get(
+    "/analytics/department/{department_id}",
+    response_model=DepartmentAnalyticsRead,
+    summary="Аналитика подразделения с учётом всех дочерних",
+)
+async def get_department_analytics(
+    department_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    department = await require_view_department(db, current_user, department_id)
+    return await AnalyticsService.get_department_metrics(db, department)

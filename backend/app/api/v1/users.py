@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from typing import Optional
+
 from app.api.deps import get_current_user, verify_tree_access
 from app.core.database import get_db
 from app.core.security import get_password_hash
@@ -12,6 +14,7 @@ from app.schemas.user import (
     UserUpdate,
     UserResponse,
 )
+from app.services.tree_services import get_visible_user_ids
 
 
 router = APIRouter(
@@ -40,17 +43,35 @@ async def require_admin(
     response_model=list[UserResponse],
 )
 async def get_users(
+    direction: Optional[str] = None,
+    department_id: Optional[int] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(get_current_user),
 ):
     """
-    Получить всех пользователей.
-    Пока доступно только администратору.
+    Список пользователей с фильтрацией по направлению и подразделению.
+
+    Доступ:
+    - администратор -> все пользователи;
+    - руководитель -> он сам + вся его ветка подчинённых;
+    - сотрудник без подчинённых -> только он сам.
     """
 
-    result = await db.execute(
-        select(User).order_by(User.id)
+    visible_ids = await get_visible_user_ids(
+        db=db,
+        current_user_id=current_user.id,
+        is_admin=current_user.is_admin,
     )
+
+    query = select(User).where(User.id.in_(visible_ids)).order_by(User.id)
+
+    if direction is not None:
+        query = query.where(User.direction == direction)
+
+    if department_id is not None:
+        query = query.where(User.department_id == department_id)
+
+    result = await db.execute(query)
 
     return result.scalars().all()
 
@@ -102,9 +123,9 @@ async def create_user(
     Создать нового пользователя.
     """
 
-    # Проверяем уникальность email.
+    # Проверяем уникальность username.
     result = await db.execute(
-        select(User).where(User.email == data.email)
+        select(User).where(User.username == data.username)
     )
 
     existing_user = result.scalar_one_or_none()
@@ -112,8 +133,22 @@ async def create_user(
     if existing_user is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Пользователь с таким email уже существует",
+            detail="Пользователь с таким username уже существует",
         )
+
+    # Проверяем уникальность email, если он указан.
+    if data.email is not None:
+        result = await db.execute(
+            select(User).where(User.email == data.email)
+        )
+
+        existing_email_user = result.scalar_one_or_none()
+
+        if existing_email_user is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Пользователь с таким email уже существует",
+            )
 
     # Проверяем подразделение.
     if data.department_id is not None:
@@ -132,6 +167,7 @@ async def create_user(
             )
 
     user = User(
+        username=data.username,
         email=data.email,
         hashed_password=get_password_hash(data.password),
         full_name=data.full_name,
@@ -172,17 +208,17 @@ async def update_user(
 
     fields = data.model_fields_set
 
-    # Email
-    if "email" in fields:
-        if data.email is None:
+    # Username
+    if "username" in fields:
+        if data.username is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email не может быть null",
+                detail="Username не может быть null",
             )
 
         result = await db.execute(
             select(User).where(
-                User.email == data.email,
+                User.username == data.username,
                 User.id != user_id,
             )
         )
@@ -192,8 +228,28 @@ async def update_user(
         if existing_user is not None:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="Пользователь с таким email уже существует",
+                detail="Пользователь с таким username уже существует",
             )
+
+        user.username = data.username
+
+    # Email
+    if "email" in fields:
+        if data.email is not None:
+            result = await db.execute(
+                select(User).where(
+                    User.email == data.email,
+                    User.id != user_id,
+                )
+            )
+
+            existing_user = result.scalar_one_or_none()
+
+            if existing_user is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Пользователь с таким email уже существует",
+                )
 
         user.email = data.email
 
@@ -297,6 +353,25 @@ async def delete_user(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Нельзя удалить текущего администратора",
+        )
+
+    # Запрещаем удалять пользователя, пока он числится руководителем
+    # хотя бы одного подразделения — иначе дерево останется без
+    # руководителя молча (leader_id тихо уйдёт в NULL по FK).
+    result = await db.execute(
+        select(Department).where(Department.leader_id == user_id)
+    )
+    led_departments = result.scalars().all()
+
+    if led_departments:
+        names = ", ".join(dep.name for dep in led_departments)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Нельзя удалить пользователя: он является руководителем "
+                f"подразделения(ий): {names}. Сначала назначьте другого "
+                "руководителя или снимите его с должности."
+            ),
         )
 
     await db.delete(user)

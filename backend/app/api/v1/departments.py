@@ -12,13 +12,14 @@ from app.schemas.department import (
     DepartmentUpdate,
     DepartmentResponse,
 )
+from app.services.access import require_view_department
 from app.services.tree_services import (
     get_all_departments_tree,
     get_leader_subtree_ids,
     get_department_tree_by_ids,
+    get_visible_department_ids,
     is_department_descendant,
 )
-from app.services.tree_services import is_department_descendant
 
 
 router = APIRouter(
@@ -95,18 +96,70 @@ async def get_departments(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if not current_user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Требуются права администратора",
-        )
+    """
+    Список подразделений.
 
-    result = await db.execute(
-        select(Department)
-        .order_by(Department.id)
+    - Администратор -> все подразделения.
+    - Руководитель -> подразделения, которыми он руководит, и их поддеревья.
+    - Сотрудник без подчинённых -> пустой список.
+    """
+
+    visible_ids = await get_visible_department_ids(
+        db=db,
+        current_user_id=current_user.id,
+        is_admin=current_user.is_admin,
     )
 
+    query = select(Department).order_by(Department.id)
+
+    if not current_user.is_admin:
+        query = query.where(Department.id.in_(visible_ids))
+
+    result = await db.execute(query)
+
     return result.scalars().all()
+
+
+@router.get("/my-tree")
+async def get_my_department_tree(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Возвращает дерево, доступное текущему пользователю.
+
+    ADMIN:
+        получает всю структуру.
+
+    LEADER:
+        получает свои подразделения и всё их поддерево.
+
+    EMPLOYEE:
+        получает 403.
+    """
+
+    # Администратор видит всю компанию.
+    if current_user.is_admin:
+        return await get_all_departments_tree(db)
+
+    # Находим подразделения, которыми руководит текущий пользователь.
+    department_ids = await get_leader_subtree_ids(
+        db=db,
+        leader_id=current_user.id,
+    )
+
+    # Если пользователь ни одним подразделением не руководит,
+    # значит у него нет дерева для просмотра.
+    if not department_ids:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="У пользователя нет подчинённых",
+        )
+
+    return await get_department_tree_by_ids(
+        db=db,
+        department_ids=department_ids,
+    )
 
 
 @router.get(
@@ -118,27 +171,14 @@ async def get_department(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if not current_user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Требуются права администратора",
-        )
+    """
+    Карточка подразделения.
 
-    result = await db.execute(
-        select(Department).where(
-            Department.id == department_id
-        )
-    )
+    Доступ: администратор -> любое; руководитель -> подразделения из
+    своей ветки (см. require_view_department).
+    """
 
-    department = result.scalar_one_or_none()
-
-    if department is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Подразделение не найдено",
-        )
-
-    return department
+    return await require_view_department(db, current_user, department_id)
 
 
 @router.patch(
@@ -282,46 +322,20 @@ async def delete_department(
             detail="Подразделение не найдено",
         )
 
+    # "Сшиваем" дерево: дети удаляемого узла переезжают к его родителю,
+    # вместо того чтобы молча стать отдельными корневыми деревьями
+    # (department.parent_id -> NULL по FK, если этого не сделать явно).
+    result = await db.execute(
+        select(Department).where(Department.parent_id == department_id)
+    )
+    children = result.scalars().all()
+
+    for child in children:
+        child.parent_id = department.parent_id
+
+    # leader_id самого удаляемого подразделения уходит вместе со строкой —
+    # ничего "висячего" не остаётся, т.к. эта информация не хранится
+    # больше нигде (в отличие от department_id у User, для которого
+    # уже есть ondelete=SET NULL на FK).
     await db.delete(department)
     await db.commit()
-
-@router.get("/my-tree")
-async def get_my_department_tree(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """
-    Возвращает дерево, доступное текущему пользователю.
-
-    ADMIN:
-        получает всю структуру.
-
-    LEADER:
-        получает свои подразделения и всё их поддерево.
-
-    EMPLOYEE:
-        получает 403.
-    """
-
-    # Администратор видит всю компанию.
-    if current_user.is_admin:
-        return await get_all_departments_tree(db)
-
-    # Находим подразделения, которыми руководит текущий пользователь.
-    department_ids = await get_leader_subtree_ids(
-        db=db,
-        leader_id=current_user.id,
-    )
-
-    # Если пользователь ни одним подразделением не руководит,
-    # значит у него нет дерева для просмотра.
-    if not department_ids:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="У пользователя нет подчинённых",
-        )
-
-    return await get_department_tree_by_ids(
-        db=db,
-        department_ids=department_ids,
-    )
