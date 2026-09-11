@@ -1,28 +1,49 @@
-from typing import List
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
-# --- Блок аналитики по конкретному сотруднику ---
+from app.schemas.analytics import UserAnalyticsRead, DepartmentAnalyticsRead, MonthlyHistoryItem
+from app.api.deps import get_db, get_current_user
+from app.models.user import User
 
-class MonthlyHistoryItem(BaseModel):
-    # Структура точки для графика: сколько навыков подтверждено в конкретном месяце
-    month: str = Field(..., description="Год и месяц в формате YYYY-MM", examples=["2026-09"])
-    count: int = Field(..., description="Количество успешно подтвержденных навыков в этом месяце", examples=[3])
+router = APIRouter(tags=["Аналитика и Метрики эффективности"])
 
-class UserAnalyticsRead(BaseModel):
-    #  Схема ответа с метриками и динамикой сотрудника
-    user_id: int = Field(..., description="ID сотрудника")
-    overdue_skills_count: int = Field(..., description="Количество скиллов в плане, по которым просрочена плановая дата подтверждения", examples=[2])
-    monthly_dynamics: List[MonthlyHistoryItem] = Field(
-        default=[],
-        description="История подтверждения навыков по месяцам (массив для построения графика)"
+
+@router.get(
+    "/analytics/user/{user_id}",
+    response_model=UserAnalyticsRead,
+    summary="Получить аналитику и динамику развития сотрудника"
+)
+async def get_user_analytics(
+        user_id: int,
+        db: AsyncSession = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    mock_dynamics = [
+        MonthlyHistoryItem(month="2026-06", count=1),
+        MonthlyHistoryItem(month="2026-07", count=3),
+        MonthlyHistoryItem(month="2026-08", count=2),
+    ]
+
+    return UserAnalyticsRead(
+        user_id=user_id,
+        overdue_skills_count=1,
+        monthly_dynamics=mock_dynamics
     )
 
 
-# --- Блок аналитики по подразделению (команде руководителя) ---
-
-class DepartmentAnalyticsRead(BaseModel):
-    """Схема ответа с метриками эффективности команды для руководителя подразделения"""
-    department_id: int = Field(..., description="ID анализируемого подразделения")
-    completion_rate: float = Field(..., description="Процент выполнения планов развития командой (от 0.0 до 100.0)", examples=[72.5])
-    open_problems_count: int = Field(..., description="Количество текущих открытых проблем у сотрудников в этом отделе", examples=[5])
-    total_planned_skills: int = Field(..., description="Общее количество запланированных скиллов у всех сотрудников подразделения суммарно", examples=[48])
+@router.get(
+    "/analytics/department/{department_id}",
+    response_model=DepartmentAnalyticsRead,
+    summary="Получить сводные метрики по подразделению"
+)
+async def get_department_analytics(
+        department_id: int,
+        db: AsyncSession = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    return DepartmentAnalyticsRead(
+        department_id=department_id,
+        completion_rate=68.5,
+        open_problems_count=3,
+        total_planned_skills=24
+    )
