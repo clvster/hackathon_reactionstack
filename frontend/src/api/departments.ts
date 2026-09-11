@@ -45,3 +45,9 @@ export function useUpdateDepartmentParent() {
     },
   });
 }
+export interface Department {
+  id: number;
+  name: string;
+  parent_id: number | null;
+  leader_id: number | null;
+}

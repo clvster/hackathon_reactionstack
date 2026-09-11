@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Table, Select, Space } from 'antd';
-import { useUsers, useUser, type User } from '../api/users';
+import { useUsers, type User } from '../api/users';
 import { useDepartmentTree, flattenTree } from '../api/departments';
 
 export default function EmployeesPage() {
