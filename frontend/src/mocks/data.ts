@@ -1,12 +1,19 @@
-export type Direction = 'BACK' | 'FRONT' | 'QA' | 'DEVOPS';
-export type UserRole = 'admin' | 'user';
+import type { 
+  SkillRead, 
+  PlanItemRead, 
+  SkillStatusEnum,
+  Direction, 
+  UserRole
+} from '../api/types';
 
-export interface Department {
-  id: number;
-  name: string;
-  parent_id: number | null;
-  head_id: number;
-}
+import type { Department } from '../api/departments';
+
+export const MOCK_DEPARTMENTS: Department[] = [
+  { id: 1, name: 'ООО "ТехноСтарт"', parent_id: null, leader_id: 1 },
+  { id: 2, name: 'Департамент разработки', parent_id: 1, leader_id: 2 },
+  { id: 3, name: 'Отдел Frontend', parent_id: 2, leader_id: 3 },
+  { id: 4, name: 'Отдел Backend', parent_id: 2, leader_id: 4 },
+];
 
 export interface User {
   id: number;
@@ -17,29 +24,6 @@ export interface User {
   manager_id: number | null;
   role: UserRole;
 }
-
-export interface Meeting {
-  id: number;
-  date: string;
-  host_id: number;
-  employee_id: number;
-  markdown_notes: string;
-  attachments: { type: 'link' | 'file'; name: string; url: string }[];
-  skills_reviewed: { skill_id: number; status: string; comment?: string }[];
-}
-
-import type{ 
-  SkillRead, 
-  PlanItemRead, 
-} from '../api/types';
-
-
-export const MOCK_DEPARTMENTS: Department[] = [
-  { id: 1, name: 'ООО "ТехноСтарт"', parent_id: null, head_id: 1 },
-  { id: 2, name: 'Департамент разработки', parent_id: 1, head_id: 2 },
-  { id: 3, name: 'Отдел Frontend', parent_id: 2, head_id: 3 },
-  { id: 4, name: 'Отдел Backend', parent_id: 2, head_id: 4 },
-];
 
 export const MOCK_USERS: User[] = [
   { 
@@ -87,13 +71,12 @@ export const MOCK_SKILLS: SkillRead[] = [
   { id: 104, name: 'PostgreSQL Optimization', department_id: 4 },
 ];
 
-
 export const MOCK_PLAN_ITEMS: PlanItemRead[] = [
   {
     id: 1,
     skill: { id: 101, name: 'React Hooks', department_id: 3 },
     target_date: '2024-03-01',
-    status: "CONFIRMED",
+    status: 'CONFIRMED' as SkillStatusEnum,
     confirmed_at: '2024-02-28',
     problem_comment: null,
   },
@@ -101,7 +84,7 @@ export const MOCK_PLAN_ITEMS: PlanItemRead[] = [
     id: 2,
     skill: { id: 102, name: 'TypeScript Advanced', department_id: 3 },
     target_date: '2024-06-15',
-    status: 'IN TRAINING',
+    status: 'IN TRAINING' as SkillStatusEnum,
     confirmed_at: null,
     problem_comment: null,
   },
@@ -109,19 +92,32 @@ export const MOCK_PLAN_ITEMS: PlanItemRead[] = [
     id: 3,
     skill: { id: 103, name: 'System Design', department_id: 2 },
     target_date: '2024-09-01',
-    status: "PROBLEM",
+    status: 'PROBLEM' as SkillStatusEnum,
     confirmed_at: null,
     problem_comment: 'Сложно дается проектирование микросервисов, нужна дополнительная литература',
   },
 ];
 
+export interface Meeting {
+  id: number;
+  date: string;
+  host_id: number;
+  employee_id: number;
+  markdown_notes: string;
+  attachments: { type: 'link' | 'file'; name: string; url: string }[];
+  skills_reviewed: { 
+    skill_id: number; 
+    status: 'CONFIRMED' | 'PROBLEM' | 'DISCUSSED'; 
+    comment?: string 
+  }[];
+}
 
-export const MOCK_MEETINGS = [
+export const MOCK_MEETINGS: Meeting[] = [
   {
     id: 1,
     date: '2024-02-28',
-    host_id: 3, // Проводил Lead Front
-    employee_id: 4, // С Анной
+    host_id: 3,
+    employee_id: 4,
     markdown_notes: '## Итоги встречи\n\nАнна отлично закрыла задачу по хукам.\n- React Hooks: зачтено\n- TypeScript: есть вопросы по дженерикам',
     attachments: [{ url: 'https://example.com/docs', type: 'link', name: 'Ссылка на документацию' }],
     skills_reviewed: [

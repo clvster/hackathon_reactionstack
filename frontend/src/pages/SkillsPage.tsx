@@ -1,10 +1,9 @@
-// src/features/skills/SkillsPage.tsx
 import { useState } from 'react';
 import { Table, Button, Tabs, Tag, Space, Modal, Form, Input, Select, DatePicker, message } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import { MOCK_SKILLS, MOCK_PLAN_ITEMS } from '../../mocks/data';
-import { SkillBadge } from '../../components/ui/SkillBadge';
-import type { SkillRead, PlanItemRead, SkillStatusEnum } from '../../api/types';
+import { MOCK_SKILLS, MOCK_PLAN_ITEMS } from '../mocks/data';
+import { SkillBadge } from '../components/ui/SkillBadge';
+import type { SkillRead, PlanItemRead, SkillStatusEnum } from '../api/types';
 import type { ColumnsType } from 'antd/es/table';
 
 const { Option } = Select;
@@ -132,9 +131,6 @@ export const SkillsPage = () => {
     },
   ];
 
-  // ============================================================================
-  // ГОДОВОЙ ПЛАН ОБУЧЕНИЯ
-  // ============================================================================
 
   const handleAddPlanItem = () => {
     planForm.resetFields();
@@ -234,9 +230,6 @@ export const SkillsPage = () => {
     },
   ];
 
-  // ============================================================================
-  // ВКЛАДКИ
-  // ============================================================================
 
   const tabItems = [
     {

@@ -5,7 +5,7 @@ import ruRU from 'antd/locale/ru_RU';
 import LoginPage from './pages/LoginPage';
 import OrgTreePage from './pages/OrgTreePage';
 import EmployeesPage from './pages/EmployeesPage';
-import  {SkillsPage}  from './features/skills/SkillsPage';
+import  {SkillsPage}  from './pages/SkillsPage';
 
 const queryClient = new QueryClient();
 

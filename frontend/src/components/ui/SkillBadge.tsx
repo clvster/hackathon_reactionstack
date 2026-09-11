@@ -1,4 +1,3 @@
-// src/components/ui/SkillBadge.tsx
 import { Tag } from 'antd';
 import type { SkillStatusEnum } from '../../api/types';
 
@@ -13,7 +12,6 @@ const statusConfig: Record<SkillStatusEnum, { color: string; text: string }> = {
   PROBLEM: { color: 'red', text: 'Проблема' },
 };
 
-// ВАЖНО: именно export const, а не export default!
 export const SkillBadge: React.FC<SkillBadgeProps> = ({ status }) => {
   const config = statusConfig[status];
   return <Tag color={config.color}>{config.text}</Tag>;
