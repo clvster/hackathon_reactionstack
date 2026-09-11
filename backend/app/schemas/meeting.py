@@ -1,32 +1,50 @@
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel, Field, ConfigDict
+
+from pydantic import BaseModel, ConfigDict, Field
+
 
 class SkillAssessment(BaseModel):
-    skill_id: int = Field(..., gt=0, description="ID оцениваемого скилла из справочника")
-    is_completed: bool = Field(False, description="Флаг: успешно ли выполнен/подтвержден навык на встрече")
-    has_problem: bool = Field(False, description="Флаг: зафиксирована ли проблема по этому навыку")
+    skill_id: int = Field(..., gt=0, description="ID скилла из справочника")
+    is_completed: bool = Field(False, description="Скилл подтверждён на встрече")
+    has_problem: bool = Field(False, description="По скиллу зафиксирована проблема")
     comment: Optional[str] = Field(None, max_length=500, description="Комментарий к оценке или описание проблемы")
 
+
+class AssessmentRead(BaseModel):
+    id: int
+    skill_id: int
+    is_completed: bool
+    has_problem: bool
+    comment: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class MeetingBase(BaseModel):
-    participant_id: int = Field(..., gt=0, description="ID сотрудника, с кем проводится встреча")
-    meeting_date: datetime = Field(..., description="Дата и время проведения встречи")
-    summary_markdown: str = Field(..., min_length=10, description="Подробные итоги встречи в формате Markdown")
-    files_and_links: List[str] = Field(default=[], description="Массив ссылок или путей к прикрепленным файлам")
+    participant_id: int = Field(..., gt=0, description="ID сотрудника, с которым проводится встреча")
+    meeting_date: datetime = Field(..., description="Дата и время встречи")
+    summary_markdown: str = Field(..., min_length=10, description="Итоги встречи в Markdown")
+    files_and_links: List[str] = Field(default=[], description="Ссылки и прикреплённые файлы")
+
 
 class MeetingCreate(MeetingBase):
-    assessments: List[SkillAssessment] = Field(default=[], description="Список оценок навыков, переданных лидом")
-    global_problem_comment: Optional[str] = Field(None, max_length=1000, description="Текст общей проблемы по сотруднику в целом")
+    assessments: List[SkillAssessment] = Field(default=[], description="Оценки скиллов на встрече")
+    global_problem_comment: Optional[str] = Field(None, max_length=1000, description="Проблема по сотруднику в целом")
+
 
 class MeetingUpdate(BaseModel):
-    meeting_date: Optional[datetime] = Field(None, description="Новая дата и время")
-    summary_markdown: Optional[str] = Field(None, min_length=10, description="Обновленный текст итогов в Markdown")
-    files_and_links: Optional[List[str]] = Field(None, description="Обновленный массив ссылок/файлов")
-    assessments: Optional[List[SkillAssessment]] = Field(None, description="Обновленный список оценок навыков")
-    global_problem_comment: Optional[str] = Field(None, max_length=1000, description="Обновленный текст общей проблемы")
+    meeting_date: Optional[datetime] = None
+    summary_markdown: Optional[str] = Field(None, min_length=10)
+    files_and_links: Optional[List[str]] = None
+    assessments: Optional[List[SkillAssessment]] = None
+    global_problem_comment: Optional[str] = Field(None, max_length=1000)
+
 
 class MeetingRead(MeetingBase):
-    id: int = Field(..., description="ID встречи из базы данных")
-    interviewer_id: int = Field(..., gt=0, description="ID руководителя, который провел встречу")
+    id: int
+    interviewer_id: int
+    problem_comment: Optional[str] = None
+    assessments: List[AssessmentRead] = []
 
     model_config = ConfigDict(from_attributes=True)
