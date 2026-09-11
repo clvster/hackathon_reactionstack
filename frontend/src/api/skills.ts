@@ -4,9 +4,8 @@ import { client } from './client';
 export interface Skill {
   id: number;
   name: string;
-  direction_id: number;
+  direction_id: string; 
 }
-
 export type SkillStatus = 'PLANNED' | 'COMPLETED' | 'IN TRAINING' | 'PROBLEM';
 
 export interface PlanItem {
