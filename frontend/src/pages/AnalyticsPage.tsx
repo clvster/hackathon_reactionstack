@@ -1,46 +1,44 @@
 import { useState } from 'react';
-import { Select, Card, Row, Col } from 'antd';
+import { Select, Card, Row, Col, Statistic } from 'antd';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { useTeamProgress, useUserProgress } from '../api/analytics';
-import { useDepartments } from '../api/departments';
+import { useUserAnalytics, useDepartmentAnalytics } from '../api/analytics';
+import { useDepartmentTree, flattenTree } from '../api/departments';
 import { useUsers } from '../api/users';
 
 export default function AnalyticsPage() {
-  const { data: departments } = useDepartments();
+  const { data: tree } = useDepartmentTree();
   const { data: users } = useUsers();
+  const departments = tree ? flattenTree(tree) : [];
+
   const [departmentId, setDepartmentId] = useState<number | null>(null);
   const [userId, setUserId] = useState<number | null>(null);
 
-  const { data: teamData } = useTeamProgress(departmentId);
-  const { data: userData } = useUserProgress(userId);
+  const { data: deptData } = useDepartmentAnalytics(departmentId);
+  const { data: userData } = useUserAnalytics(userId);
 
   return (
     <div style={{ padding: 24 }}>
       <h2>Аналитика</h2>
       <Row gutter={16}>
         <Col span={12}>
-          <Card title="Прогресс по подразделению">
+          <Card title="По подразделению">
             <Select
               placeholder="Выберите подразделение"
               style={{ width: '100%', marginBottom: 16 }}
-              options={(departments ?? []).map((d) => ({ value: d.id, label: d.name }))}
+              options={departments.map((d) => ({ value: d.id, label: d.name }))}
               onChange={setDepartmentId}
             />
-            {teamData && (
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={teamData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="progress" stroke="#4f46e5" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
+            {deptData && (
+              <Row gutter={16}>
+                <Col span={8}><Statistic title="Выполнение плана" value={deptData.completion_rate} suffix="%" /></Col>
+                <Col span={8}><Statistic title="Проблемы" value={deptData.open_problems_count} /></Col>
+                <Col span={8}><Statistic title="Всего в планах" value={deptData.total_planned_skills} /></Col>
+              </Row>
             )}
           </Card>
         </Col>
         <Col span={12}>
-          <Card title="Прогресс по сотруднику">
+          <Card title="По сотруднику">
             <Select
               placeholder="Выберите сотрудника"
               style={{ width: '100%', marginBottom: 16 }}
@@ -48,15 +46,18 @@ export default function AnalyticsPage() {
               onChange={setUserId}
             />
             {userData && (
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={userData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="progress" stroke="#dc2626" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
+              <>
+                <Statistic title="Просрочено скиллов" value={userData.overdue_skills_count} style={{ marginBottom: 16 }} />
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={userData.monthly_dynamics}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="count" stroke="#FF5C00" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </>
             )}
           </Card>
         </Col>

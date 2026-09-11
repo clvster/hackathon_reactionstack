@@ -1,36 +1,27 @@
 import { useState } from 'react';
 import { Table, Select, Space } from 'antd';
-import { useUsers, type User } from '../api/users';
-import { useDepartments } from '../api/departments';
-import { usePermissions } from '../api/permissions';
+import { useUsers, useUser, type User } from '../api/users';
+import { useDepartmentTree, flattenTree } from '../api/departments';
 
 export default function EmployeesPage() {
-  const { data: users, isLoading } = useUsers();
-  const { data: departments } = useDepartments();
-  const { data: permissions } = usePermissions();
+  const [directionFilter, setDirectionFilter] = useState<string | undefined>();
+  const [departmentFilter, setDepartmentFilter] = useState<number | undefined>();
 
-  const [directionFilter, setDirectionFilter] = useState<string | null>(null);
-  const [departmentFilter, setDepartmentFilter] = useState<number | null>(null);
-
-  const visibleUsers = (users ?? []).filter(
-    (u) => permissions?.is_admin || permissions?.visible_user_ids.includes(u.id)
-  );
-
-  const filteredUsers = visibleUsers.filter((u) => {
-    if (directionFilter && u.direction !== directionFilter) return false;
-    if (departmentFilter && u.department_id !== departmentFilter) return false;
-    return true;
+  const { data: users, isLoading } = useUsers({
+    direction: directionFilter,
+    department_id: departmentFilter,
   });
+  const { data: tree } = useDepartmentTree();
+  const departments = tree ? flattenTree(tree) : [];
 
   const columns = [
     { title: 'ФИО', dataIndex: 'full_name', key: 'full_name' },
     { title: 'Направление', dataIndex: 'direction', key: 'direction' },
-    { title: 'Подразделение', dataIndex: 'department_name', key: 'department_name' },
     {
-      title: 'Руководитель',
-      dataIndex: 'leader_name',
-      key: 'leader_name',
-      render: (v: string | null) => v ?? '—',
+      title: 'Подразделение',
+      dataIndex: 'department_id',
+      key: 'department_id',
+      render: (id: number | null) => departments.find((d) => d.id === id)?.name ?? '—',
     },
   ];
 
@@ -47,22 +38,17 @@ export default function EmployeesPage() {
             { value: 'FRONT', label: 'FRONT' },
             { value: 'QA', label: 'QA' },
           ]}
-          onChange={(value) => setDirectionFilter(value ?? null)}
+          onChange={setDirectionFilter}
         />
         <Select
           placeholder="Подразделение"
           allowClear
           style={{ width: 200 }}
-          options={(departments ?? []).map((d) => ({ value: d.id, label: d.name }))}
-          onChange={(value) => setDepartmentFilter(value ?? null)}
+          options={departments.map((d) => ({ value: d.id, label: d.name }))}
+          onChange={setDepartmentFilter}
         />
       </Space>
-      <Table<User>
-        rowKey="id"
-        columns={columns}
-        dataSource={filteredUsers}
-        loading={isLoading}
-      />
+      <Table<User> rowKey="id" columns={columns} dataSource={users} loading={isLoading} />
     </div>
   );
 }
