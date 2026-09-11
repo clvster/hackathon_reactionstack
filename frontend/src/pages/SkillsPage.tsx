@@ -3,6 +3,7 @@ import { Table, Button, Tabs, Tag, Space, Modal, Form, Input, Select, DatePicker
 import { PlusOutlined, EditOutlined } from '@ant-design/icons';
 import { SkillBadge } from '../components/ui/SkillBadge';
 import { useUsers } from '../api/users';
+import { usePermissions } from '../api/permissions';
 import {
   useSkills,
   useCreateSkill,
@@ -16,13 +17,15 @@ import type { ColumnsType } from 'antd/es/table';
 
 const { Option } = Select;
 
-const DIRECTION_LABELS: Record<number, string> = {
-  1: 'Frontend',
-  2: 'Backend',
-  3: 'QA',
+// TODO: подтвердить точные строковые значения от бэка и подставить сюда
+const DIRECTION_LABELS: Record<string, string> = {
+  BACK: 'Backend',
+  FRONT: 'Frontend',
+  QA: 'QA',
 };
 
 export const SkillsPage = () => {
+  const { data: permissions } = usePermissions();
   const { data: skills, isLoading } = useSkills();
   const { data: users } = useUsers();
   const createSkill = useCreateSkill();
@@ -74,7 +77,7 @@ export const SkillsPage = () => {
       title: 'Направление',
       dataIndex: 'direction_id',
       key: 'direction_id',
-      render: (id: number) => <Tag>{DIRECTION_LABELS[id] ?? `Направление #${id}`}</Tag>,
+      render: (id: string) => <Tag>{DIRECTION_LABELS[id] ?? id}</Tag>,
     },
     {
       title: 'Действия',
@@ -125,7 +128,7 @@ export const SkillsPage = () => {
       title: 'Направление',
       dataIndex: ['skill', 'direction_id'],
       key: 'direction',
-      render: (id: number) => <Tag>{DIRECTION_LABELS[id] ?? `Направление #${id}`}</Tag>,
+      render: (id: string) => <Tag>{DIRECTION_LABELS[id] ?? id}</Tag>,
     },
     { title: 'Плановая дата', dataIndex: 'target_date', key: 'target_date' },
     {
@@ -188,21 +191,31 @@ export const SkillsPage = () => {
         </div>
       ),
     },
-    {
-      key: 'skills',
-      label: 'Справочник навыков (Админ)',
-      children: (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-            <h3>Справочник навыков</h3>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleAddSkill}>
-              Добавить навык
-            </Button>
-          </div>
-          <Table columns={skillColumns} dataSource={skills} rowKey="id" loading={isLoading} pagination={{ pageSize: 10 }} />
-        </div>
-      ),
-    },
+    ...(permissions?.is_admin
+      ? [
+          {
+            key: 'skills',
+            label: 'Справочник навыков (Админ)',
+            children: (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <h3>Справочник навыков</h3>
+                  <Button type="primary" icon={<PlusOutlined />} onClick={handleAddSkill}>
+                    Добавить навык
+                  </Button>
+                </div>
+                <Table
+                  columns={skillColumns}
+                  dataSource={skills}
+                  rowKey="id"
+                  loading={isLoading}
+                  pagination={{ pageSize: 10 }}
+                />
+              </div>
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -223,9 +236,9 @@ export const SkillsPage = () => {
           </Form.Item>
           <Form.Item name="direction_id" label="Направление" rules={[{ required: true, message: 'Выберите направление' }]}>
             <Select placeholder="Выберите направление">
-              <Option value={1}>Frontend</Option>
-              <Option value={2}>Backend</Option>
-              <Option value={3}>QA</Option>
+              <Option value="BACK">Backend</Option>
+              <Option value="FRONT">Frontend</Option>
+              <Option value="QA">QA</Option>
             </Select>
           </Form.Item>
         </Form>
