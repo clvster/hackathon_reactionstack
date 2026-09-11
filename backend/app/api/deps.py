@@ -11,7 +11,7 @@ from app.services.tree_services import user_has_tree_access
 
 
 oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/auth/login"
+    tokenUrl="/api/v1/auth/login"
 )
 
 
@@ -55,7 +55,7 @@ async def get_current_user(
 
 
 async def verify_tree_access(
-    target_user_id: int = Path(...),
+    user_id: int = Path(...),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> User:
@@ -76,7 +76,7 @@ async def verify_tree_access(
     has_access = await user_has_tree_access(
         db=db,
         current_user_id=current_user.id,
-        target_user_id=target_user_id,
+        target_user_id=user_id,
     )
 
     if not has_access:
