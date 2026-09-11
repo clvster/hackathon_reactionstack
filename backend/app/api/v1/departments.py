@@ -18,7 +18,6 @@ from app.services.tree_services import (
     get_department_tree_by_ids,
     is_department_descendant,
 )
-from app.services.tree_services import is_department_descendant
 
 
 router = APIRouter(
@@ -324,5 +323,20 @@ async def delete_department(
             detail="Подразделение не найдено",
         )
 
+    # "Сшиваем" дерево: дети удаляемого узла переезжают к его родителю,
+    # вместо того чтобы молча стать отдельными корневыми деревьями
+    # (department.parent_id -> NULL по FK, если этого не сделать явно).
+    result = await db.execute(
+        select(Department).where(Department.parent_id == department_id)
+    )
+    children = result.scalars().all()
+
+    for child in children:
+        child.parent_id = department.parent_id
+
+    # leader_id самого удаляемого подразделения уходит вместе со строкой —
+    # ничего "висячего" не остаётся, т.к. эта информация не хранится
+    # больше нигде (в отличие от department_id у User, для которого
+    # уже есть ondelete=SET NULL на FK).
     await db.delete(department)
     await db.commit()
