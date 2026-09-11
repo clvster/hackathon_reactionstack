@@ -12,10 +12,12 @@ from app.schemas.department import (
     DepartmentUpdate,
     DepartmentResponse,
 )
+from app.services.access import require_view_department
 from app.services.tree_services import (
     get_all_departments_tree,
     get_leader_subtree_ids,
     get_department_tree_by_ids,
+    get_visible_department_ids,
     is_department_descendant,
 )
 
@@ -94,16 +96,26 @@ async def get_departments(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if not current_user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Требуются права администратора",
-        )
+    """
+    Список подразделений.
 
-    result = await db.execute(
-        select(Department)
-        .order_by(Department.id)
+    - Администратор -> все подразделения.
+    - Руководитель -> подразделения, которыми он руководит, и их поддеревья.
+    - Сотрудник без подчинённых -> пустой список.
+    """
+
+    visible_ids = await get_visible_department_ids(
+        db=db,
+        current_user_id=current_user.id,
+        is_admin=current_user.is_admin,
     )
+
+    query = select(Department).order_by(Department.id)
+
+    if not current_user.is_admin:
+        query = query.where(Department.id.in_(visible_ids))
+
+    result = await db.execute(query)
 
     return result.scalars().all()
 
@@ -159,27 +171,14 @@ async def get_department(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if not current_user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Требуются права администратора",
-        )
+    """
+    Карточка подразделения.
 
-    result = await db.execute(
-        select(Department).where(
-            Department.id == department_id
-        )
-    )
+    Доступ: администратор -> любое; руководитель -> подразделения из
+    своей ветки (см. require_view_department).
+    """
 
-    department = result.scalar_one_or_none()
-
-    if department is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Подразделение не найдено",
-        )
-
-    return department
+    return await require_view_department(db, current_user, department_id)
 
 
 @router.patch(
