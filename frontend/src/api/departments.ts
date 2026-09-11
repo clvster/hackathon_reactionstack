@@ -1,33 +1,53 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { client } from './client';
 
+export interface DepartmentTreeNode {
+  id: number;
+  name: string;
+  parent_id: number | null;
+  leader_id: number | null;
+  children: DepartmentTreeNode[];
+}
+
+export function useDepartmentTree() {
+  return useQuery({
+    queryKey: ['departments', 'my-tree'],
+    queryFn: async () => {
+      const { data } = await client.get<DepartmentTreeNode[]>('/departments/my-tree');
+      return data;
+    },
+  });
+}
+
+// разворачиваем дерево в плоский список 
+export function flattenTree(nodes: DepartmentTreeNode[]): Omit<DepartmentTreeNode, 'children'>[] {
+  const result: Omit<DepartmentTreeNode, 'children'>[] = [];
+  const walk = (list: DepartmentTreeNode[]) => {
+    for (const node of list) {
+      const { children, ...rest } = node;
+      result.push(rest);
+      if (children.length) walk(children);
+    }
+  };
+  walk(nodes);
+  return result;
+}
+
+export function useUpdateDepartmentParent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, parent_id }: { id: number; parent_id: number | null }) => {
+      const { data } = await client.patch(`/departments/${id}`, { parent_id });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['departments'] });
+    },
+  });
+}
 export interface Department {
   id: number;
   name: string;
   parent_id: number | null;
   leader_id: number | null;
-  
-}
-
-// Временные моковые данные
-const MOCK_DEPARTMENTS: Department[] = [
-    
-    { id: 1, name: 'Разработка', parent_id: null, leader_id: 1 },
-    { id: 2, name: 'Backend', parent_id: 1, leader_id: 2 },
-    { id: 3, name: 'Frontend', parent_id: 1, leader_id: 3 },
-    { id: 4, name: 'QA', parent_id: 1, leader_id: 4 },
-
-];
-
-export function useDepartments() {
-  return useQuery({
-    queryKey: ['departments'],
-    queryFn: async () => {
-    
-        // заменить на реальный запрос РЕАЛЬНО НЕ ЗАБЫЫЫЫЫТЬ
-        // const { data } = await client.get<Department[]>('/departments');
-        // return data;
-
-        return MOCK_DEPARTMENTS;
-    },
-  });
 }

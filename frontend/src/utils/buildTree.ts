@@ -1,17 +1,15 @@
-import type { Department } from '../api/departments';
+import type { DepartmentTreeNode } from '../api/departments';
 
-export interface TreeNode {
+export interface AntTreeNode {
   key: string;
   title: string;
-  children: TreeNode[];
+  children: AntTreeNode[];
 }
 
-export function buildTree(items: Department[], parentId: number | null = null): TreeNode[] {
-  return items
-    .filter((item) => item.parent_id === parentId)
-    .map((item) => ({
-      key: String(item.id),
-      title: item.name,
-      children: buildTree(items, item.id),
-    }));
+export function toAntTree(nodes: DepartmentTreeNode[]): AntTreeNode[] {
+  return nodes.map((node) => ({
+    key: String(node.id),
+    title: node.name,
+    children: toAntTree(node.children),
+  }));
 }
