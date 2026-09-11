@@ -1,5 +1,6 @@
 import { Tag } from 'antd';
-import type { SkillStatusEnum } from '../../api/types';
+
+type SkillStatusEnum = 'PLANNED' | 'COMPLETED' | 'IN TRAINING' | 'PROBLEM';
 
 interface SkillBadgeProps {
   status: SkillStatusEnum;
@@ -7,7 +8,7 @@ interface SkillBadgeProps {
 
 const statusConfig: Record<SkillStatusEnum, { color: string; text: string }> = {
   PLANNED: { color: 'blue', text: 'Запланирован' },
-  CONFIRMED: { color: 'green', text: 'Зачтён' },
+  COMPLETED: { color: 'green', text: 'Зачтён' },
   'IN TRAINING': { color: 'orange', text: 'В процессе' },
   PROBLEM: { color: 'red', text: 'Проблема' },
 };
