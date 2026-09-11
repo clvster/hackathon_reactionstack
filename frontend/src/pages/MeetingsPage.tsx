@@ -31,7 +31,14 @@ export default function MeetingsPage() {
     },
   ];
 
-  const onFinish = (values: any) => {
+interface MeetingFormValues {
+  date: { format: (fmt: string) => string }; // или dayjs.Dayjs
+  participant_ids: number[];
+  summary_markdown: string;
+  attachments?: string;
+}
+
+  const onFinish = (values: MeetingFormValues) => {
     createMeeting.mutate({
       date: values.date.format('YYYY-MM-DD'),
       participant_ids: values.participant_ids,

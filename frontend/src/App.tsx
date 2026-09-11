@@ -5,8 +5,11 @@ import ruRU from 'antd/locale/ru_RU';
 import LoginPage from './pages/LoginPage';
 import OrgTreePage from './pages/OrgTreePage';
 import EmployeesPage from './pages/EmployeesPage';
-import MeetingsPage from './pages/MeetingsPage';
-import AnalyticsPage from './pages/AnalyticsPage';
+
+import  {SkillsPage}  from './pages/SkillsPage';
+import  MeetingsPage  from './pages/MeetingsPage';
+import  AnalyticsPage  from './pages/AnalyticsPage';
+
 import AppLayout from './components/layout/AppLayout';
 
 const queryClient = new QueryClient();
@@ -25,7 +28,9 @@ function App() {
               <Route path="/employees" element={<EmployeesPage />} />
               <Route path="/meetings" element={<MeetingsPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/skills" element={<SkillsPage />} />
             </Route>
+
           </Routes>
         </BrowserRouter>
       </ConfigProvider>

@@ -13,7 +13,9 @@ export default function OrgTreePage() {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
+  
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (departments) setItems(departments);
   }, [departments]);
 
