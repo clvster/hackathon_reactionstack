@@ -11,7 +11,7 @@ from app.services.tree_services import user_has_tree_access
 
 
 oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/auth/login"
+    tokenUrl="/api/v1/auth/login"
 )
 
 
