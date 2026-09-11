@@ -35,6 +35,20 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d ci"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
@@ -49,6 +63,19 @@ jobs:
           DATABASE_URL: postgresql+asyncpg://ci:ci@localhost:5432/ci
           SECRET_KEY: ci-only
         run: python -c "import app.main"
+      - name: Alembic has a single head
+        run: |
+          heads=$(alembic heads | wc -l)
+          if [ "$heads" -ne 1 ]; then
+            echo "::error::Multiple Alembic heads detected — merge migration branches before merging this PR."
+            alembic heads
+            exit 1
+          fi
+      - name: Alembic upgrade applies cleanly
+        env:
+          DATABASE_URL: postgresql+asyncpg://ci:ci@localhost:5432/ci
+          SECRET_KEY: ci-only
+        run: alembic upgrade head
 
   frontend:
     if: github.event_name == 'pull_request'
