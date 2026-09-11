@@ -50,6 +50,7 @@ async def seed_data():
 
         # 2. Создаем пользователей
         admin = User(
+            username="admin",
             email="admin@test.com",
             hashed_password=get_password_hash("pass123"),
             full_name="Администратор Системы",
@@ -59,6 +60,7 @@ async def seed_data():
         )
 
         cto = User(
+            username="cto",
             email="cto@test.com",
             hashed_password=get_password_hash("pass123"),
             full_name="Сергей CTO",
@@ -68,6 +70,7 @@ async def seed_data():
         )
 
         head_engineering = User(
+            username="head",
             email="head@test.com",
             hashed_password=get_password_hash("pass123"),
             full_name="Иван Head of Engineering",
@@ -77,6 +80,7 @@ async def seed_data():
         )
 
         team_lead = User(
+            username="lead",
             email="lead@test.com",
             hashed_password=get_password_hash("pass123"),
             full_name="Пётр Backend Team Lead",
@@ -86,6 +90,7 @@ async def seed_data():
         )
 
         junior = User(
+            username="junior",
             email="junior@test.com",
             hashed_password=get_password_hash("pass123"),
             full_name="Алексей Junior Developer",
