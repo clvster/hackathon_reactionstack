@@ -308,3 +308,22 @@ async def delete_plan_item(
     await db.delete(item)
     await db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+@router.get(
+    "/users/{user_id}/plan",
+    response_model=List[PlanItemRead],
+    summary="Получить годовой план развития сотрудника"
+)
+async def get_user_plan(
+        user_id: int,
+        db: AsyncSession = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    query = select(PlanItem).where(PlanItem.user_id == user_id)
+    result = await db.execute(query)
+    items = result.scalars().all()
+
+    for item in items:
+        await db.refresh(item, attribute_names=["skill"])
+
+    return items
