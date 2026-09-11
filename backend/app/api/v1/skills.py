@@ -4,23 +4,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.schemas.skill import SkillCreate, SkillUpdate, SkillRead, PlanItemCreate, PlanItemRead
-from app.api.deps import get_db, get_current_user
+from app.api.deps import get_db, get_current_user, verify_tree_access
 from app.models.user import User
 from app.models.skill import Skill, PlanItem
+from app.api.v1.users import require_admin
 
 router = APIRouter(tags=["Справочник скиллов и Направления"])
-
-
-async def check_admin_or_lead_role(
-        current_user: User = Depends(get_current_user)
-) -> User:
-    if not current_user.is_admin and not getattr(current_user, "is_lead", False) and not getattr(current_user,
-                                                                                                 "leader_id", None):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Действие доступно только Администратору или Руководителю",
-        )
-    return current_user
 
 
 @router.post(
@@ -32,7 +21,7 @@ async def check_admin_or_lead_role(
 async def create_skill(
         skill_in: SkillCreate,
         db: AsyncSession = Depends(get_db),
-        current_user: User = Depends(check_admin_or_lead_role)
+        current_user: User = Depends(require_admin)
 ):
     db_skill = Skill(name=skill_in.name, direction_id=skill_in.direction_id)
     db.add(db_skill)
@@ -68,7 +57,7 @@ async def update_skill(
         skill_id: int,
         skill_in: SkillUpdate,
         db: AsyncSession = Depends(get_db),
-        current_user: User = Depends(check_admin_or_lead_role)
+        current_user: User = Depends(require_admin)
 ):
     result = await db.execute(select(Skill).where(Skill.id == skill_id))
     db_skill = result.scalar_one_or_none()
@@ -100,7 +89,7 @@ async def add_skills_to_plan(
         user_id: int,
         plan_items_in: List[PlanItemCreate],
         db: AsyncSession = Depends(get_db),
-        current_user: User = Depends(get_current_user)
+        current_user: User = Depends(verify_tree_access)
 ):
     from app.schemas.skill import SkillStatusEnum
 
