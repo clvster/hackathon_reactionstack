@@ -7,6 +7,7 @@ import OrgTreePage from './pages/OrgTreePage';
 import EmployeesPage from './pages/EmployeesPage';
 import MeetingsPage from './pages/MeetingsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import AppLayout from './components/layout/AppLayout';
 
 const queryClient = new QueryClient();
 
@@ -18,11 +19,13 @@ function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/tree" element={<OrgTreePage />} />
-            <Route path="/employees" element={<EmployeesPage />} />
-            <Route path="/meetings" element={<MeetingsPage />} />
-            
-            <Route path="/analytics" element={<AnalyticsPage />} />
+
+            <Route element={<AppLayout />}>
+              <Route path="/tree" element={<OrgTreePage />} />
+              <Route path="/employees" element={<EmployeesPage />} />
+              <Route path="/meetings" element={<MeetingsPage />} />
+              <Route path="/analytics" element={<AnalyticsPage />} />
+            </Route>
           </Routes>
         </BrowserRouter>
       </ConfigProvider>
