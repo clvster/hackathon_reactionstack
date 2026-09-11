@@ -1,11 +1,8 @@
-from app.api.v1 import auth, departments, users
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
-from app.api.v1 import auth
-from app.api.v1 import users
-from app.api.v1 import departments
-from app.api.v1 import permissions
+
+from app.api.v1 import auth, departments, meetings, permissions, skills, users, analytics
 
 app = FastAPI(
     title="PR System API",
@@ -17,11 +14,14 @@ app = FastAPI(
 Instrumentator(excluded_handlers=["/metrics"]).instrument(app).expose(
     app, include_in_schema=False
 )
-app.include_router(auth.router, prefix="/api/v1")
 
+app.include_router(auth.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")
 app.include_router(departments.router, prefix="/api/v1")
 app.include_router(permissions.router, prefix="/api/v1")
+app.include_router(skills.router, prefix="/api/v1")
+app.include_router(meetings.router, prefix="/api/v1")
+app.include_router(analytics.router, prefix="/api/v1")
 
 # Разрешаем CORS для фронтенда
 app.add_middleware(
