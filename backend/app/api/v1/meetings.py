@@ -5,8 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.schemas.meeting import MeetingCreate, MeetingUpdate, MeetingRead
-from app.api.v1.skills import check_admin_or_lead_role
-from app.api.deps import get_db, get_current_user
+from app.api.deps import get_db, get_current_user, ensure_can_manage_pr
 from app.models.user import User
 from app.models.meeting import Meeting, MeetingAssessment
 from app.models.skill import PlanItem
@@ -24,8 +23,10 @@ router = APIRouter(tags=["Проведение 1:1 встреч (PR-проток
 async def create_meeting(
         meeting_in: MeetingCreate,
         db: AsyncSession = Depends(get_db),
-        current_user: User = Depends(check_admin_or_lead_role)
+        current_user: User = Depends(get_current_user)
 ):
+    await ensure_can_manage_pr(db, current_user, meeting_in.participant_id)
+
     db_meeting = Meeting(
         interviewer_id=current_user.id,
         participant_id=meeting_in.participant_id,
@@ -78,6 +79,17 @@ async def get_meetings_history(
         current_user: User = Depends(get_current_user)
 ):
     query = select(Meeting)
+
+    if not current_user.is_admin:
+        visible_ids = [current_user.id]
+        if getattr(current_user, "is_lead", False):
+            visible_ids.extend(getattr(current_user, "subordinate_ids", []))
+
+        query = query.where(
+            (Meeting.participant_id.in_(visible_ids)) |
+            (Meeting.interviewer_id == current_user.id)
+        )
+
     if participant_id is not None:
         query = query.where(Meeting.participant_id == participant_id)
     if interviewer_id is not None:
@@ -96,7 +108,7 @@ async def update_meeting(
         meeting_id: int,
         meeting_in: MeetingUpdate,
         db: AsyncSession = Depends(get_db),
-        current_user: User = Depends(check_admin_or_lead_role)
+        current_user: User = Depends(get_current_user)
 ):
     result = await db.execute(select(Meeting).where(Meeting.id == meeting_id))
     db_meeting = result.scalar_one_or_none()
@@ -106,6 +118,8 @@ async def update_meeting(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Протокол встречи не найден"
         )
+
+    await ensure_can_manage_pr(db, current_user, db_meeting.participant_id)
 
     fields = meeting_in.model_fields_set
     if "meeting_date" in fields:

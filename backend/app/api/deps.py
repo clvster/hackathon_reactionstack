@@ -133,3 +133,21 @@ async def verify_tree_access(
         )
 
     return current_user
+
+
+async def ensure_can_manage_pr(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    target_user_id: int = None
+) -> User:
+    if current_user.id == target_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Сотрудник не может проводить Performance Review самому себе",
+        )
+    if not current_user.is_admin and not getattr(current_user, "is_lead", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Недостаточно прав для управления протоколами встреч",
+        )
+    return current_user
