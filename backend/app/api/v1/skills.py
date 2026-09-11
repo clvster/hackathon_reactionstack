@@ -1,10 +1,12 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.schemas.skill import SkillCreate, SkillUpdate, SkillRead, PlanItemCreate, PlanItemRead
 from app.api.deps import get_db, get_current_user
 from app.models.user import User
+from app.models.skill import Skill, PlanItem
 
 router = APIRouter(tags=["Справочник скиллов и Направления"])
 
@@ -32,7 +34,11 @@ async def create_skill(
         db: AsyncSession = Depends(get_db),
         current_user: User = Depends(check_admin_or_lead_role)
 ):
-    return SkillRead(id=1, name=skill_in.name, direction_id=skill_in.direction_id)
+    db_skill = Skill(name=skill_in.name, direction_id=skill_in.direction_id)
+    db.add(db_skill)
+    await db.commit()
+    await db.refresh(db_skill)
+    return db_skill
 
 
 @router.get(
@@ -45,10 +51,12 @@ async def get_skills(
         db: AsyncSession = Depends(get_db),
         current_user: User = Depends(get_current_user)
 ):
-    return [
-        SkillRead(id=1, name="Python & FastAPI", direction_id=direction_id or 5),
-        SkillRead(id=2, name="Docker & CI/CD", direction_id=direction_id or 5),
-    ]
+    query = select(Skill)
+    if direction_id is not None:
+        query = query.where(Skill.direction_id == direction_id)
+
+    result = await db.execute(query)
+    return result.scalars().all()
 
 
 @router.patch(
@@ -62,11 +70,24 @@ async def update_skill(
         db: AsyncSession = Depends(get_db),
         current_user: User = Depends(check_admin_or_lead_role)
 ):
-    return SkillRead(
-        id=skill_id,
-        name=skill_in.name or "Обновленный навык",
-        direction_id=skill_in.direction_id or 5
-    )
+    result = await db.execute(select(Skill).where(Skill.id == skill_id))
+    db_skill = result.scalar_one_or_none()
+
+    if db_skill is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Навык не найден"
+        )
+
+    fields = skill_in.model_fields_set
+    if "name" in fields:
+        db_skill.name = skill_in.name
+    if "direction_id" in fields:
+        db_skill.direction_id = skill_in.direction_id
+
+    await db.commit()
+    await db.refresh(db_skill)
+    return db_skill
 
 
 @router.post(
@@ -83,16 +104,22 @@ async def add_skills_to_plan(
 ):
     from app.schemas.skill import SkillStatusEnum
 
-    mock_response = []
-    for index, item in enumerate(plan_items_in):
-        mock_response.append(
-            PlanItemRead(
-                id=100 + index,
-                skill=SkillRead(id=item.skill_id, name=f"Тестовый скилл {item.skill_id}", direction_id=5),
-                target_date=item.target_date,
-                status=SkillStatusEnum.PLANNED,
-                confirmed_at=None,
-                problem_comment=None
-            )
+    created_items = []
+    for item in plan_items_in:
+        db_plan_item = PlanItem(
+            user_id=user_id,
+            skill_id=item.skill_id,
+            target_date=item.target_date,
+            status=SkillStatusEnum.PLANNED
         )
-    return mock_response
+        db.add(db_plan_item)
+        created_items.append(db_plan_item)
+
+    await db.commit()
+
+    response_items = []
+    for item in created_items:
+        await db.refresh(item, attribute_names=["skill"])
+        response_items.append(item)
+
+    return response_items
