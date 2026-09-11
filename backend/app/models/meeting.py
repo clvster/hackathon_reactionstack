@@ -12,6 +12,7 @@ class Meeting(Base):
     meeting_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     summary_markdown: Mapped[str] = mapped_column(Text, nullable=False)
     files_and_links: Mapped[list[str]] = mapped_column(ARRAY(String), default=[], nullable=False)
+    problem_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     assessments: Mapped[list["MeetingAssessment"]] = relationship("MeetingAssessment", back_populates="meeting", cascade="all, delete-orphan")
 

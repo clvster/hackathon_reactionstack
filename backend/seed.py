@@ -14,7 +14,7 @@ async def seed_data():
         # CASCADE учитывает внешние ключи между users и departments.
         await session.execute(
             text(
-                "TRUNCATE TABLE users, departments "
+                "TRUNCATE TABLE meeting_assessments, meetings, plan_items, skills, users, departments "
                 "RESTART IDENTITY CASCADE"
             )
         )
