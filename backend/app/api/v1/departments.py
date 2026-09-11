@@ -109,6 +109,48 @@ async def get_departments(
     return result.scalars().all()
 
 
+@router.get("/my-tree")
+async def get_my_department_tree(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Возвращает дерево, доступное текущему пользователю.
+
+    ADMIN:
+        получает всю структуру.
+
+    LEADER:
+        получает свои подразделения и всё их поддерево.
+
+    EMPLOYEE:
+        получает 403.
+    """
+
+    # Администратор видит всю компанию.
+    if current_user.is_admin:
+        return await get_all_departments_tree(db)
+
+    # Находим подразделения, которыми руководит текущий пользователь.
+    department_ids = await get_leader_subtree_ids(
+        db=db,
+        leader_id=current_user.id,
+    )
+
+    # Если пользователь ни одним подразделением не руководит,
+    # значит у него нет дерева для просмотра.
+    if not department_ids:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="У пользователя нет подчинённых",
+        )
+
+    return await get_department_tree_by_ids(
+        db=db,
+        department_ids=department_ids,
+    )
+
+
 @router.get(
     "/{department_id}",
     response_model=DepartmentResponse,
@@ -284,44 +326,3 @@ async def delete_department(
 
     await db.delete(department)
     await db.commit()
-
-@router.get("/my-tree")
-async def get_my_department_tree(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """
-    Возвращает дерево, доступное текущему пользователю.
-
-    ADMIN:
-        получает всю структуру.
-
-    LEADER:
-        получает свои подразделения и всё их поддерево.
-
-    EMPLOYEE:
-        получает 403.
-    """
-
-    # Администратор видит всю компанию.
-    if current_user.is_admin:
-        return await get_all_departments_tree(db)
-
-    # Находим подразделения, которыми руководит текущий пользователь.
-    department_ids = await get_leader_subtree_ids(
-        db=db,
-        leader_id=current_user.id,
-    )
-
-    # Если пользователь ни одним подразделением не руководит,
-    # значит у него нет дерева для просмотра.
-    if not department_ids:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="У пользователя нет подчинённых",
-        )
-
-    return await get_department_tree_by_ids(
-        db=db,
-        department_ids=department_ids,
-    )
