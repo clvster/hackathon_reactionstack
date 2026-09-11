@@ -17,7 +17,7 @@ export default function LoginPage() {
 
   return (
     <div style={{ maxWidth: 320, margin: '100px auto' }}>
-      <h2>Вход</h2>
+      <h2 style={{ color: '#1A1A1A', fontWeight: 800 }}>Вход</h2>
 
       <Form onFinish={onFinish} layout="vertical">
         <Form.Item name="username" required={false} label="Логин" rules={[
