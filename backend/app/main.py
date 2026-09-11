@@ -1,9 +1,10 @@
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from app.api.v1 import auth, departments, users, skills, meetings, analytics
+from app.api.v1 import auth, departments, permissions, users, skills, meetings, analytics
 from app.services.notifier import start_scheduler
 
 
@@ -29,6 +30,7 @@ Instrumentator(excluded_handlers=["/metrics"]).instrument(app).expose(
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")
 app.include_router(departments.router, prefix="/api/v1")
+app.include_router(permissions.router, prefix="/api/v1")
 app.include_router(skills.router, prefix="/api/v1")
 app.include_router(meetings.router, prefix="/api/v1")
 app.include_router(analytics.router, prefix="/api/v1")

@@ -11,7 +11,7 @@ from app.services.tree_services import user_has_tree_access
 
 
 oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/api/v1/auth/login"
+    tokenUrl="/auth/login"
 )
 
 
@@ -54,6 +54,52 @@ async def get_current_user(
     return user
 
 
+async def ensure_tree_access(
+    db: AsyncSession,
+    current_user: User,
+    target_user_id: int,
+) -> None:
+    """
+    Проверка доступа для использования ВНУТРИ роутов других сущностей
+    (meetings, skills, analytics и т.д.), где путь не выглядит как
+    /resource/{user_id}, так что Path-зависимость verify_tree_access
+    напрямую не подходит — сначала нужно достать объект и понять, к
+    какому пользователю он относится.
+
+    Пример использования в meetings.py:
+
+        meeting = await db.get(Meeting, meeting_id)
+        if meeting is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Встреча не найдена")
+
+        await ensure_tree_access(db, current_user, meeting.participant_id)
+        # если исключение не выброшено - доступ есть, можно продолжать
+
+    Правила те же, что в verify_tree_access:
+    - администратор -> всегда доступ;
+    - пользователь -> доступ к самому себе;
+    - руководитель -> доступ к своей ветке дерева.
+    """
+
+    if current_user.is_admin:
+        return
+
+    if current_user.id == target_user_id:
+        return
+
+    has_access = await user_has_tree_access(
+        db=db,
+        current_user_id=current_user.id,
+        target_user_id=target_user_id,
+    )
+
+    if not has_access:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Нет доступа к этому пользователю",
+        )
+
+
 async def verify_tree_access(
     user_id: int = Path(...),
     current_user: User = Depends(get_current_user),
@@ -61,7 +107,8 @@ async def verify_tree_access(
 ) -> User:
     """
     Проверяет, имеет ли текущий пользователь доступ
-    к профилю target_user_id.
+    к профилю user_id (параметр пути ДОЛЖЕН называться так же,
+    как в роуте, иначе FastAPI не сможет его подставить).
 
     Правила:
     - администратор имеет доступ ко всем;
