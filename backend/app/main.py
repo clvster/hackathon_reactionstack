@@ -1,3 +1,4 @@
+from app.api.v1 import auth, departments, users
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -5,8 +6,17 @@ from app.api.v1 import auth
 from app.api.v1 import users
 from app.api.v1 import departments
 from app.api.v1 import permissions
-app = FastAPI(title="PR System API", version="1.0.0")
-Instrumentator(excluded_handlers=["/metrics"]).instrument(app).expose(app, include_in_schema=False)
+
+app = FastAPI(
+    title="PR System API",
+    version="1.0.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json",
+)
+Instrumentator(excluded_handlers=["/metrics"]).instrument(app).expose(
+    app, include_in_schema=False
+)
 app.include_router(auth.router, prefix="/api/v1")
 
 app.include_router(users.router, prefix="/api/v1")
