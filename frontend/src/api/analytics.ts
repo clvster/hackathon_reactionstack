@@ -1,30 +1,42 @@
 import { useQuery } from '@tanstack/react-query';
+import { client } from './client';
 
-export interface AnalyticsPoint {
+export interface MonthlyHistoryItem {
   month: string;
-  progress: number;
+  count: number;
 }
 
-const MOCK_TEAM_PROGRESS: AnalyticsPoint[] = [
-  { month: 'Янв', progress: 20 },
-  { month: 'Фев', progress: 35 },
-  { month: 'Мар', progress: 50 },
-  { month: 'Апр', progress: 68 },
-  { month: 'Май', progress: 75 },
-];
+export interface UserAnalytics {
+  user_id: number;
+  overdue_skills_count: number;
+  monthly_dynamics: MonthlyHistoryItem[];
+}
 
-export function useTeamProgress(departmentId: number | null) {
+export interface DepartmentAnalytics {
+  department_id: number;
+  completion_rate: number;
+  open_problems_count: number;
+  total_planned_skills: number;
+}
+
+export function useUserAnalytics(userId: number | null) {
   return useQuery({
-    queryKey: ['analytics', 'team', departmentId],
-    queryFn: async () => MOCK_TEAM_PROGRESS,
-    enabled: departmentId !== null,
+    queryKey: ['analytics', 'user', userId],
+    queryFn: async () => {
+      const { data } = await client.get<UserAnalytics>(`/analytics/user/${userId}`);
+      return data;
+    },
+    enabled: userId !== null,
   });
 }
 
-export function useUserProgress(userId: number | null) {
+export function useDepartmentAnalytics(departmentId: number | null) {
   return useQuery({
-    queryKey: ['analytics', 'user', userId],
-    queryFn: async () => MOCK_TEAM_PROGRESS.map((p) => ({ ...p, progress: p.progress - 10 })),
-    enabled: userId !== null,
+    queryKey: ['analytics', 'department', departmentId],
+    queryFn: async () => {
+      const { data } = await client.get<DepartmentAnalytics>(`/analytics/department/${departmentId}`);
+      return data;
+    },
+    enabled: departmentId !== null,
   });
 }

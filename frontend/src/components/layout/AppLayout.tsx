@@ -29,7 +29,7 @@ export default function AppLayout() {
   };
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout style={{ minHeight: '100vh', width: '100%'  }}>
       <Sider width={220} style={{ background: '#1A1A1A' }}>
         <div
           style={{

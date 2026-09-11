@@ -62,6 +62,7 @@ export interface SkillRead {
   id: number;
   name: string;
   department_id: number;
+  direction_id?: number; 
 }
 
 export interface SkillCreate {

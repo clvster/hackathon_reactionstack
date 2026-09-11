@@ -1,46 +1,47 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { client } from './client';
+
+export interface SkillAssessment {
+  skill_id: number;
+  is_completed: boolean;
+  has_problem: boolean;
+  comment?: string | null;
+}
 
 export interface Meeting {
   id: number;
-  date: string;
-  participant_ids: number[];
-  participant_names: string[];
+  interviewer_id: number;
+  participant_id: number;
+  meeting_date: string;
   summary_markdown: string;
-  attachments: string[];
-  skill_marks: { skill_id: number; skill_name: string; comment: string; status: 'confirmed' | 'problem' }[];
+  files_and_links: string[];
 }
 
-let MOCK_MEETINGS: Meeting[] = [
-  {
-    id: 1,
-    date: '2026-01-15',
-    participant_ids: [1, 2],
-    participant_names: ['Иванов Иван Иванович', 'Петров Пётр Петрович'],
-    summary_markdown: '## Итоги встречи\n\nОбсудили прогресс по **FastAPI**.',
-    attachments: ['https://example.com/doc.pdf'],
-    skill_marks: [{ skill_id: 1, skill_name: 'FastAPI', comment: 'Хорошо усвоено', status: 'confirmed' }],
-  },
-];
+export interface MeetingCreatePayload {
+  participant_id: number;
+  meeting_date: string;
+  summary_markdown: string;
+  files_and_links: string[];
+  assessments: SkillAssessment[];
+  global_problem_comment?: string | null;
+}
 
-export function useMeetings() {
+export function useMeetings(filters?: { participant_id?: number; interviewer_id?: number }) {
   return useQuery({
-    queryKey: ['meetings'],
-    queryFn: async () => MOCK_MEETINGS,
+    queryKey: ['meetings', filters],
+    queryFn: async () => {
+      const { data } = await client.get<Meeting[]>('/meetings', { params: filters });
+      return data;
+    },
   });
 }
 
 export function useCreateMeeting() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: Omit<Meeting, 'id' | 'participant_names'>) => {
-      // TODO: заменить на реальный запрос POST /meetings
-      const newMeeting: Meeting = {
-        ...payload,
-        id: Date.now(),
-        participant_names: [],
-      };
-      MOCK_MEETINGS = [...MOCK_MEETINGS, newMeeting];
-      return newMeeting;
+    mutationFn: async (payload: MeetingCreatePayload) => {
+      const { data } = await client.post<Meeting>('/meetings', payload);
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['meetings'] });
