@@ -13,3 +13,6 @@ python-multipart>=0.0.9
 
 python-dotenv>=1.0.1
 prometheus-fastapi-instrumentator>=7.0.0
+
+aiogram>=3.4.0
+apscheduler>=3.10.4
