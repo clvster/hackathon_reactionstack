@@ -1,4 +1,6 @@
 import asyncio
+import importlib
+import pkgutil
 from logging.config import fileConfig
 
 from alembic import context
@@ -7,7 +9,11 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.core.config import settings
-from app.models import Base
+import app.models
+from app.core.database import Base
+
+for module in pkgutil.iter_modules(app.models.__path__):
+    importlib.import_module(f"app.models.{module.name}")
 
 config = context.config
 if config.config_file_name is not None:
